@@ -36,15 +36,12 @@ detect_vcs_dir() {
 # Core function to generate VCS path string for a given directory
 generate_vcs_path() {
     local target_dir="${1:-$PWD}"
-    
-    # Switch to target directory using pushd (in subshell for isolation)
-    pushd "$target_dir" > /dev/null || return
-    
-    local current_path="$PWD"
+    local current_path="${1:-$PWD}"
+    local display_path="$current_path"
 
-    # Handle home directory expansion early for path processing
-    if [[ "$current_path" == "$HOME"* ]]; then
-        current_path="~${current_path#$HOME}"
+    # Handle home directory expansion for display purposes only
+    if [[ "$display_path" == "$HOME"* ]]; then
+        display_path="~${display_path#$HOME}"
     fi
     
     # Split path into components for backwards processing
@@ -115,8 +112,6 @@ generate_vcs_path() {
         result="/$result"
     fi
     
-    # Restore original directory
-    popd > /dev/null || return
     echo "$result"
 }
 
