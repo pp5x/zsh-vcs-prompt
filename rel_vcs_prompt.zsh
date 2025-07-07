@@ -45,7 +45,7 @@ generate_vcs_path() {
     fi
     
     # Split path into components for backwards processing
-    local -a path_parts=(${(s:/:)current_path})
+    local -a path_parts=(${(s:/:)display_path})
     local -a result_parts=()
     
     # Track outermost VCS directory found during traversal
@@ -53,14 +53,21 @@ generate_vcs_path() {
     local outermost_vcs_type=""
     
     # Process path components backwards (from end to beginning)
+    local -a current_parts=(${(s:/:)current_path})
     for ((i=${#path_parts[@]}; i > 0; i--)); do
         local p="${path_parts[$i]}"
         
         # Skip empty components (from splitting)
         [[ -z "$p" ]] && continue
 
-        # Build the full path up to this p
-        local full_path="/${(j:/:)path_parts[@]:0:${i}}"
+        # Build the full path up to this p - use current_path for VCS detection
+        # Calculate corresponding index in current_parts
+        local current_idx=$i
+        if [[ "$display_path" == "~"* ]]; then
+            # For home paths, path_parts has ~ as first element, current_parts doesn't
+            current_idx=$((i + ${#current_parts[@]} - ${#path_parts[@]}))
+        fi
+        local full_path="/${(j:/:)current_parts[@]:0:${current_idx}}"
 
         # Check if this path contains VCS
         local vcs_type="$(detect_vcs_dir "$full_path")"
