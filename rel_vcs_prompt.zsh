@@ -92,7 +92,7 @@ process_path() {
         
         if [[ -n "$vcs_type" ]]; then
             local color=$(get_vcs_color "$vcs_type")
-            echo "%{%B${color}%}${single_part}%{%f%b%}"
+            echo "%B${color}${single_part}%f%b"
         else
             echo "$single_part"
         fi
@@ -136,7 +136,7 @@ process_path() {
         # Add component (colored or truncated)
         if [[ "$should_color" == true ]]; then
             local color=$(get_vcs_color "$vcs_type")
-            result_parts+=("%{%B${color}%}${part}%{%f%b%}")
+            result_parts+=("%B${color}${part}%f%b")
         else
             result_parts+=($(truncate_component "$part"))
         fi
@@ -177,7 +177,7 @@ process_path() {
     
     if [[ -n "$last_vcs_type" ]]; then
         local color=$(get_vcs_color "$last_vcs_type")
-        result_parts+=("%{%B${color}%}${last_part}%{%f%b%}")
+        result_parts+=("%B${color}${last_part}%f%b")
     else
         result_parts+=("$last_part")
     fi
@@ -209,7 +209,7 @@ generate_prompt_string() {
         local outermost_type="${outermost_vcs%%:*}"
         
         local color=$(get_vcs_color "$outermost_type")
-        local -a prompt_parts=("%{%B${color}%}${outermost_name}%{%f%b%}")
+        local -a prompt_parts=("%B${color}${outermost_name}%f%b")
         
         # Calculate relative path from outermost VCS root
         local relative_path="${PWD#$outermost_root}"
@@ -236,12 +236,10 @@ generate_prompt_string() {
 }
 
 prompt_pwd() {
-    psvar[1]=$(generate_prompt_string)
-    PROMPT="${psvar[1]} %(!.#.$) "
+    PROMPT="$(generate_prompt_string) %(!.#.$) "
 }
 
 precmd_functions+=( prompt_pwd )
-PROMPT="%1v %(!.#.$) "
 
 # Testable function that returns the prompt string for a given directory
 get_prompt_string() {
