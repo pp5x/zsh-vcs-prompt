@@ -36,7 +36,7 @@ prompt_pwd() {
                 "git") prefix='%F{104}' ;;
             esac
             
-            prompt_parts+=("%{%B${prefix}%}@${vcs_name}%{%f%b%}")
+            prompt_parts+=("%{%B%U${prefix}%}${vcs_name}%{%f%b%u%}")
         done
         
         # Calculate path relative to the innermost (first in stack) VCS root
