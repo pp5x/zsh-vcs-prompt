@@ -181,7 +181,8 @@
     mkdir -p foo/.repo/manifests/.git
     
     result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests")
-    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/manifests"
+    # Update expectation: manifests should be colored since it contains .git
+    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
 }
 
 @test 'manifests special case: nested VCS coloring' {
@@ -233,4 +234,26 @@
     result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests/subdir")
     # From subdir, both foo and manifests should be colored (nested VCS)
     assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}/subdir"
+}
+
+@test 'directory .git: manifests should be colored when containing VCS' {
+    # Test baseline: directory-based .git should color manifests
+    mkdir -p test_dir_git/.repo/manifests/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/test_dir_git/.repo/manifests")
+    # manifests should be colored because it contains .git
+    assert "$result" same_as "%{%B%F{green}%}test_dir_git%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
+}
+
+@test 'symlink .git in subdirectory: should show nested VCS in innermost component' {
+    # Test nested scenario: go INTO the manifests subdirectory that has symlinked .git
+    mkdir -p foo/.repo/manifests
+    mkdir -p actual_git_dir
+    
+    # Create .git as a symlink 
+    ln -s "$TEST_DIR/actual_git_dir" foo/.repo/manifests/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests")
+    # From subdir, both foo and manifests should be colored (nested VCS)
+    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
 }

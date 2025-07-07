@@ -165,6 +165,16 @@ process_path() {
         done
     fi
     
+    # If no VCS type found by position, check if this directory itself contains VCS
+    # This handles the case where we're AT a VCS directory (not just passing through it)
+    if [[ -z "$last_vcs_type" && -n "$vcs_root" ]]; then
+        local full_path="$vcs_root"
+        for ((j=1; j<=${#path_parts[@]}; j++)); do
+            [[ -n "${path_parts[$j]}" ]] && full_path+="/${path_parts[$j]}"
+        done
+        last_vcs_type=$(check_vcs_dir "$full_path")
+    fi
+    
     if [[ -n "$last_vcs_type" ]]; then
         local color=$(get_vcs_color "$last_vcs_type")
         result_parts+=("%{%B${color}%}${last_part}%{%f%b%}")
