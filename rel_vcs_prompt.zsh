@@ -55,37 +55,31 @@ generate_vcs_path() {
     # Process path components backwards (from end to beginning)
     local -a current_parts=(${(s:/:)current_path})
     for ((i=${#path_parts[@]}; i > 0; i--)); do
-        local p="${path_parts[$i]}"
-        
-        # Skip empty components (from splitting)
-        [[ -z "$p" ]] && continue
+        local dir="${path_parts[$i]}"
+        [[ -z "$dir" ]] && continue
 
-        # Build the full path up to this p - use current_path for VCS detection
+        # Build full path for VCS detection
         local current_idx=$i
         if [[ "$display_path" == "~"* ]]; then
             current_idx=$((i + ${#current_parts[@]} - ${#path_parts[@]}))
         fi
         local full_path="/${(j:/:)current_parts[@]:0:${current_idx}}"
 
-        # Check if this path contains VCS
+        # Check for VCS
         local vcs_type="$(detect_vcs_dir "$full_path")"
         if [[ -n "$vcs_type" ]]; then
-            # VCS directory - use full p name with color
+            # VCS directory with color
             local color=$(get_vcs_color "$vcs_type")
-            result_parts=("%B${color}${p}%f%b" "${result_parts[@]}")
-
-            # Update outermost VCS info - track where VCS starts in final array
+            result_parts=("%B${color}${dir}%f%b" "${result_parts[@]}")
             outermost_vcs_root="$full_path"
             outermost_vcs_type="$vcs_type"
             outermost_vcs_start=$((i - 1))
         else
             # Non-VCS directory
             if [[ $i -eq ${#path_parts[@]} ]]; then
-                # First p visited (current directory) - always show full name
-                result_parts=("$p" "${result_parts[@]}")
+                result_parts=("$dir" "${result_parts[@]}")
             else
-                # Intermediate p - truncate
-                result_parts=($(truncate_component "$p") "${result_parts[@]}")
+                result_parts=($(truncate_component "$dir") "${result_parts[@]}")
             fi
         fi
     done
