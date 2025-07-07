@@ -192,9 +192,8 @@ process_path() {
 generate_vcs_path() {
     local target_dir="${1:-$PWD}"
     
-    # Save current PWD and switch to target directory
-    local original_pwd="$PWD"
-    cd "$target_dir"
+    # Switch to target directory using pushd (in subshell for isolation)
+    pushd "$target_dir" > /dev/null
     
     local vcs_stack_str=$(build_vcs_stack)
     local -a vcs_stack=(${(s: :)vcs_stack_str})
@@ -230,8 +229,8 @@ generate_vcs_path() {
         result=$(process_path "$p" "" "")
     fi
     
-    # Restore original PWD
-    cd "$original_pwd"
+    # Restore original directory
+    popd > /dev/null
     echo "$result"
 }
 
