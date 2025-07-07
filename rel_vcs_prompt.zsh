@@ -6,7 +6,7 @@ get_vcs_color() {
     case "$1" in
         "git") echo '%F{blue}' ;;
         "jj") echo '%F{magenta}' ;;
-        "repo") echo '%F{green}' ;;
+        "repo") echo '%F{red}' ;;
         *) echo '' ;;
     esac
 }
@@ -188,53 +188,13 @@ process_path() {
     echo "$result"
 }
 
-prompt_pwd() {
-    local vcs_stack_str=$(build_vcs_stack)
-    local -a vcs_stack=(${(s: :)vcs_stack_str})
+# Core function to generate prompt string for a given directory (based on prompt_pwd logic)
+generate_prompt_string() {
+    local target_dir="${1:-$PWD}"
     
-    if [[ ${#vcs_stack[@]} -gt 0 ]]; then
-        # VCS mode: start with outermost VCS root
-        local outermost_vcs="${vcs_stack[-1]}"
-        local outermost_root="${outermost_vcs#*:}"
-        outermost_root="${outermost_root%:*}"
-        local outermost_name="${outermost_vcs##*:}"
-        local outermost_type="${outermost_vcs%%:*}"
-        
-        local color=$(get_vcs_color "$outermost_type")
-        local -a prompt_parts=("%{%B${color}%}${outermost_name}%{%f%b%}")
-        
-        # Calculate relative path from outermost VCS root
-        local relative_path="${PWD#$outermost_root}"
-        relative_path="${relative_path#/}"
-        
-        if [[ -n "$relative_path" ]]; then
-            local processed_path=$(process_path "$relative_path" "$outermost_root" "$vcs_stack_str")
-            prompt_parts+=("$processed_path")
-        fi
-        
-        psvar[1]="${(j:/:)prompt_parts}"
-    else
-        # Non-VCS mode: handle home directory and process normally
-        local p="$PWD"
-        
-        [[ "$p" == "$HOME" ]] && psvar[1]="~" && PROMPT="${psvar[1]} %(!.#.$) " && return
-        [[ "$p" == "$HOME"/* ]] && p="~${p#$HOME}"
-        
-        psvar[1]=$(process_path "$p" "" "")
-    fi
-    
-    PROMPT="${psvar[1]} %(!.#.$) "
-}
-
-precmd_functions+=( prompt_pwd )
-PROMPT="%1v %(!.#.$) "
-
-# Testable function that returns the prompt string for a given directory
-get_prompt_string() {
-    local test_dir="$1"
+    # Save current PWD and switch to target directory
     local original_pwd="$PWD"
-    
-    cd "$test_dir"
+    cd "$target_dir"
     
     local vcs_stack_str=$(build_vcs_stack)
     local -a vcs_stack=(${(s: :)vcs_stack_str})
@@ -265,36 +225,26 @@ get_prompt_string() {
         # Non-VCS mode: handle home directory and process normally
         local p="$PWD"
         
-        if [[ "$p" == "$HOME" ]]; then
-            result="~"
-        elif [[ "$p" == "$HOME"/* ]]; then
-            p="~${p#$HOME}"
-            result=$(process_path "$p" "" "")
-        else
-            result=$(process_path "$p" "" "")
-        fi
+        [[ "$p" == "$HOME"* ]] && p="~${p#$HOME}"
+        
+        result=$(process_path "$p" "" "")
     fi
     
+    # Restore original PWD
     cd "$original_pwd"
     echo "$result"
 }
 
-# Debug functions (simplified)
-debug_prompt() {
-    local original_pwd="$PWD"
-    [[ -n "$1" ]] && cd "$1"
-    prompt_pwd
-    echo "Debug prompt for $PWD: ${psvar[1]}"
-    cd "$original_pwd"
+prompt_pwd() {
+    psvar[1]=$(generate_prompt_string)
+    PROMPT="${psvar[1]} %(!.#.$) "
 }
 
-debug_prompt_no_vcs() {
-    local original_pwd="$PWD"
-    PWD="$1"
-    local p="$PWD"
-    [[ "$p" == "$HOME" ]] && echo "Debug prompt for $1: ~" && PWD="$original_pwd" && return
-    [[ "$p" == "$HOME"/* ]] && p="~${p#$HOME}"
-    local result=$(process_path "$p" "" "")
-    echo "Debug prompt for $1: $result"
-    PWD="$original_pwd"
+precmd_functions+=( prompt_pwd )
+PROMPT="%1v %(!.#.$) "
+
+# Testable function that returns the prompt string for a given directory
+get_prompt_string() {
+    local test_dir="$1"
+    generate_prompt_string "$test_dir"
 }

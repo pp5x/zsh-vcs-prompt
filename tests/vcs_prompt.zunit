@@ -43,7 +43,7 @@
     mkdir -p project/.repo
     
     result=$(get_prompt_string "$TEST_DIR/project")
-    assert "$result" same_as "%{%B%F{green}%}project%{%f%b%}"
+    assert "$result" same_as "%{%B%F{red}%}project%{%f%b%}"
 }
 
 @test 'path truncation: basic behavior' {
@@ -86,7 +86,7 @@
     mkdir -p myproject/.repo
     
     result=$(get_prompt_string "$TEST_DIR/myproject/.repo")
-    assert "$result" same_as "%{%B%F{green}%}myproject%{%f%b%}/.repo"
+    assert "$result" same_as "%{%B%F{red}%}myproject%{%f%b%}/.repo"
 }
 
 # =============================================================================
@@ -174,7 +174,7 @@
     mkdir -p project/module/submodule/deep
     
     result=$(get_prompt_string "$TEST_DIR/project/module/submodule/deep")
-    assert "$result" same_as "%{%B%F{blue}%}project%{%f%b%}/%{%B%F{magenta}%}module%{%f%b%}/%{%B%F{green}%}submodule%{%f%b%}/deep"
+    assert "$result" same_as "%{%B%F{blue}%}project%{%f%b%}/%{%B%F{magenta}%}module%{%f%b%}/%{%B%F{red}%}submodule%{%f%b%}/deep"
 }
 
 @test 'manifests special case: at manifests level' {
@@ -182,7 +182,7 @@
     
     result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests")
     # Update expectation: manifests should be colored since it contains .git
-    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
+    assert "$result" same_as "%{%B%F{red}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
 }
 
 @test 'manifests special case: nested VCS coloring' {
@@ -190,7 +190,7 @@
     mkdir -p foo/.repo/manifests/subdir
     
     result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests/subdir")
-    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}/subdir"
+    assert "$result" same_as "%{%B%F{red}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}/subdir"
 }
 
 @test 'inside nested VCS: outer .git directory' {
@@ -233,7 +233,7 @@
     
     result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests/subdir")
     # From subdir, both foo and manifests should be colored (nested VCS)
-    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}/subdir"
+    assert "$result" same_as "%{%B%F{red}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}/subdir"
 }
 
 @test 'directory .git: manifests should be colored when containing VCS' {
@@ -242,7 +242,7 @@
     
     result=$(get_prompt_string "$TEST_DIR/test_dir_git/.repo/manifests")
     # manifests should be colored because it contains .git
-    assert "$result" same_as "%{%B%F{green}%}test_dir_git%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
+    assert "$result" same_as "%{%B%F{red}%}test_dir_git%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
 }
 
 @test 'symlink .git in subdirectory: should show nested VCS in innermost component' {
@@ -255,5 +255,5 @@
     
     result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests")
     # From subdir, both foo and manifests should be colored (nested VCS)
-    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
+    assert "$result" same_as "%{%B%F{red}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}"
 }
