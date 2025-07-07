@@ -200,3 +200,37 @@
     result=$(get_prompt_string "$TEST_DIR/outer/.git/refs")
     assert "$result" same_as "%{%B%F{blue}%}outer%{%f%b%}/.g/refs"
 }
+
+@test 'git file (not directory): should detect VCS' {
+    # Create a simple case: directory with .git file (like git worktrees)
+    mkdir -p simple_project
+    echo "gitdir: ../actual_git" > simple_project/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/simple_project")
+    # simple_project should be colored blue because it contains .git file
+    assert "$result" same_as "%{%B%F{blue}%}simple_project%{%f%b%}"
+}
+
+@test 'symlink .git detection: simple case' {
+    # Simple symlink test 
+    mkdir -p test_project
+    mkdir -p target_dir
+    ln -s "$TEST_DIR/target_dir" test_project/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/test_project")
+    assert "$result" same_as "%{%B%F{blue}%}test_project%{%f%b%}"
+}
+
+@test 'symlink .git in subdirectory: should show nested VCS' {
+    # Test nested scenario: go INTO the manifests subdirectory that has symlinked .git
+    mkdir -p foo/.repo/manifests
+    mkdir -p actual_git_dir
+    mkdir -p foo/.repo/manifests/subdir
+    
+    # Create .git as a symlink 
+    ln -s "$TEST_DIR/actual_git_dir" foo/.repo/manifests/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests/subdir")
+    # From subdir, both foo and manifests should be colored (nested VCS)
+    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}/subdir"
+}

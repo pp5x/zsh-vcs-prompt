@@ -24,9 +24,12 @@ truncate_component() {
 # Helper function to check if directory contains VCS
 check_vcs_dir() {
     local dir="$1"
-    [[ -d "$dir/.git" ]] && echo "git" && return
-    [[ -d "$dir/.jj" ]] && echo "jj" && return
-    [[ -d "$dir/.repo" ]] && echo "repo" && return
+    # Check for git: directory, symlink, or file (git worktrees/submodules)
+    [[ -d "$dir/.git" || -L "$dir/.git" || -f "$dir/.git" ]] && echo "git" && return
+    # Check for jj: directory or symlink
+    [[ -d "$dir/.jj" || -L "$dir/.jj" ]] && echo "jj" && return
+    # Check for repo: directory or symlink
+    [[ -d "$dir/.repo" || -L "$dir/.repo" ]] && echo "repo" && return
     echo ""
 }
 
