@@ -35,7 +35,6 @@ detect_vcs_dir() {
 
 # Core function to generate VCS path string for a given directory
 generate_vcs_path() {
-    local target_dir="${1:-$PWD}"
     local current_path="${1:-$PWD}"
     local display_path="$current_path"
 
@@ -51,6 +50,7 @@ generate_vcs_path() {
     # Track outermost VCS directory found during traversal
     local outermost_vcs_root=""
     local outermost_vcs_type=""
+    local outermost_vcs_start=-1
     
     # Process path components backwards (from end to beginning)
     local -a current_parts=(${(s:/:)current_path})
@@ -61,10 +61,8 @@ generate_vcs_path() {
         [[ -z "$p" ]] && continue
 
         # Build the full path up to this p - use current_path for VCS detection
-        # Calculate corresponding index in current_parts
         local current_idx=$i
         if [[ "$display_path" == "~"* ]]; then
-            # For home paths, path_parts has ~ as first element, current_parts doesn't
             current_idx=$((i + ${#current_parts[@]} - ${#path_parts[@]}))
         fi
         local full_path="/${(j:/:)current_parts[@]:0:${current_idx}}"
@@ -76,9 +74,10 @@ generate_vcs_path() {
             local color=$(get_vcs_color "$vcs_type")
             result_parts=("%B${color}${p}%f%b" "${result_parts[@]}")
 
-            # Update outermost VCS info
+            # Update outermost VCS info - track where VCS starts in final array
             outermost_vcs_root="$full_path"
             outermost_vcs_type="$vcs_type"
+            outermost_vcs_start=$((i - 1))
         else
             # Non-VCS directory
             if [[ $i -eq ${#path_parts[@]} ]]; then
@@ -92,23 +91,8 @@ generate_vcs_path() {
     done
     
     # If we found an outermost VCS directory, discard all components before it
-    if [[ -n "$outermost_vcs_root" ]]; then
-        # Find the VCS root in result_parts and keep from there
-        local -a final_parts=()
-        local found_vcs=false
-        
-        for part in "${result_parts[@]}"; do
-            # Check if this part contains the outermost VCS coloring
-            if [[ "$part" == *"%B%F{"*"}${outermost_vcs_root##*/}%f%b"* ]]; then
-                found_vcs=true
-            fi
-            
-            if [[ "$found_vcs" == true ]]; then
-                final_parts+=("$part")
-            fi
-        done
-        
-        result_parts=("${final_parts[@]}")
+    if [[ $outermost_vcs_start -ge 0 ]]; then
+        result_parts=("${result_parts[@]:${outermost_vcs_start}}")
     fi
     
     # Join result
@@ -124,9 +108,8 @@ generate_vcs_path() {
 
 # Build the prompt format string for a given directory
 build_prompt_format() {
-    local target_dir="${1:-$PWD}"
-    local path_part=$(generate_vcs_path "$target_dir")
-    echo "${path_part} %(?..[%F{red}%?%f] )%(!.#.$) "
+    local path=$(generate_vcs_path "$1")
+    echo "${path} %(?..[%F{red}%?%f] )%(!.#.$) "
 }
 
 prompt_pwd() {
