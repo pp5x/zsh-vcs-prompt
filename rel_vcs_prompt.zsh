@@ -66,8 +66,35 @@ process_path() {
     local -a vcs_stack=($3)
     local -a path_parts=(${(s:/:)path})
     
-    # Handle single component
-    [[ ${#path_parts[@]} -eq 1 ]] && echo "$path" && return
+    # Handle single component - still check for VCS coloring
+    if [[ ${#path_parts[@]} -eq 1 ]]; then
+        local single_part="$path"
+        local vcs_type=""
+        
+        # Check if this single component is a VCS root by position
+        if [[ -n "$vcs_root" ]]; then
+            local full_path="$vcs_root/$single_part"
+            
+            # Check if any VCS root matches this exact path position
+            local -a vcs_array=(${(s: :)vcs_stack})
+            for vcs_info in "${vcs_array[@]}"; do
+                local vcs_path="${vcs_info#*:}"
+                vcs_path="${vcs_path%:*}"
+                if [[ "$vcs_path" == "$full_path" ]]; then
+                    vcs_type="${vcs_info%%:*}"
+                    break
+                fi
+            done
+        fi
+        
+        if [[ -n "$vcs_type" ]]; then
+            local color=$(get_vcs_color "$vcs_type")
+            echo "%{%B${color}%}${single_part}%{%f%b%}"
+        else
+            echo "$single_part"
+        fi
+        return
+    fi
     
     local -a result_parts=()
     local is_absolute=$([[ "$path" == /* ]] && echo true || echo false)
@@ -79,25 +106,28 @@ process_path() {
         # Skip empty parts (from leading slash)
         [[ -z "$part" ]] && continue
         
-        # Check if this part should be colored (VCS detection)
+        # Check if this part should be colored (VCS detection by position)
         local should_color=false
         local vcs_type=""
         
         if [[ -n "$vcs_root" ]]; then
-            # Build full path to check for VCS
+            # Build full path to check for VCS at this position
             local full_path="$vcs_root"
             for ((j=1; j<=i; j++)); do
                 [[ -n "${path_parts[$j]}" ]] && full_path+="/${path_parts[$j]}"
             done
             
-            vcs_type=$(check_vcs_dir "$full_path")
-            [[ -n "$vcs_type" ]] && should_color=true
-        fi
-        
-        # Check if it's a known VCS root
-        if [[ -z "$vcs_type" && -n "$vcs_stack" ]]; then
-            vcs_type=$(is_vcs_root "$part" "$vcs_stack")
-            [[ -n "$vcs_type" ]] && should_color=true
+            # Check if any VCS root matches this exact path position
+            local -a vcs_array=(${(s: :)vcs_stack})
+            for vcs_info in "${vcs_array[@]}"; do
+                local vcs_path="${vcs_info#*:}"
+                vcs_path="${vcs_path%:*}"
+                if [[ "$vcs_path" == "$full_path" ]]; then
+                    vcs_type="${vcs_info%%:*}"
+                    should_color=true
+                    break
+                fi
+            done
         fi
         
         # Add component (colored or truncated)
@@ -111,15 +141,25 @@ process_path() {
     
     # Handle last component
     local last_part="${path_parts[-1]}"
-    local last_vcs_type=$(is_vcs_root "$last_part" "$vcs_stack")
+    local last_vcs_type=""
     
-    # If not a known VCS root, check if it contains VCS directories
-    if [[ -z "$last_vcs_type" && -n "$vcs_root" ]]; then
+    # Check if last component is a VCS root by position
+    if [[ -n "$vcs_root" ]]; then
         local full_path="$vcs_root"
         for ((j=1; j<=${#path_parts[@]}; j++)); do
             [[ -n "${path_parts[$j]}" ]] && full_path+="/${path_parts[$j]}"
         done
-        last_vcs_type=$(check_vcs_dir "$full_path")
+        
+        # Check if any VCS root matches this exact path position
+        local -a vcs_array=($vcs_stack)
+        for vcs_info in "${vcs_array[@]}"; do
+            local vcs_path="${vcs_info#*:}"
+            vcs_path="${vcs_path%:*}"
+            if [[ "$vcs_path" == "$full_path" ]]; then
+                last_vcs_type="${vcs_info%%:*}"
+                break
+            fi
+        done
     fi
     
     if [[ -n "$last_vcs_type" ]]; then
@@ -175,6 +215,56 @@ prompt_pwd() {
 
 precmd_functions+=( prompt_pwd )
 PROMPT="%1v %(!.#.$) "
+
+# Testable function that returns the prompt string for a given directory
+get_prompt_string() {
+    local test_dir="$1"
+    local original_pwd="$PWD"
+    
+    cd "$test_dir"
+    
+    local vcs_stack_str=$(build_vcs_stack)
+    local -a vcs_stack=(${(s: :)vcs_stack_str})
+    
+    local result=""
+    if [[ ${#vcs_stack[@]} -gt 0 ]]; then
+        # VCS mode: start with outermost VCS root
+        local outermost_vcs="${vcs_stack[-1]}"
+        local outermost_root="${outermost_vcs#*:}"
+        outermost_root="${outermost_root%:*}"
+        local outermost_name="${outermost_vcs##*:}"
+        local outermost_type="${outermost_vcs%%:*}"
+        
+        local color=$(get_vcs_color "$outermost_type")
+        local -a prompt_parts=("%{%B${color}%}${outermost_name}%{%f%b%}")
+        
+        # Calculate relative path from outermost VCS root
+        local relative_path="${PWD#$outermost_root}"
+        relative_path="${relative_path#/}"
+        
+        if [[ -n "$relative_path" ]]; then
+            local processed_path=$(process_path "$relative_path" "$outermost_root" "$vcs_stack_str")
+            prompt_parts+=("$processed_path")
+        fi
+        
+        result="${(j:/:)prompt_parts}"
+    else
+        # Non-VCS mode: handle home directory and process normally
+        local p="$PWD"
+        
+        if [[ "$p" == "$HOME" ]]; then
+            result="~"
+        elif [[ "$p" == "$HOME"/* ]]; then
+            p="~${p#$HOME}"
+            result=$(process_path "$p" "" "")
+        else
+            result=$(process_path "$p" "" "")
+        fi
+    fi
+    
+    cd "$original_pwd"
+    echo "$result"
+}
 
 # Debug functions (simplified)
 debug_prompt() {

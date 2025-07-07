@@ -1,0 +1,202 @@
+#!/usr/bin/env zunit
+
+# Test suite for VCS prompt functionality using zunit
+
+@setup {
+    # Source the main script
+    load "../rel_vcs_prompt.zsh"
+    
+    # Create a temporary directory for each test
+    TEST_DIR=$(mktemp -d)
+    cd "$TEST_DIR"
+    
+    # Create a fake HOME directory for testing
+    FAKE_HOME="$TEST_DIR/fake_home"
+    mkdir -p "$FAKE_HOME"
+}
+
+@teardown {
+    # Clean up after each test
+    cd /
+    rm -rf "$TEST_DIR"
+}
+
+# =============================================================================
+# UNIT TESTS - Testing individual features
+# =============================================================================
+
+@test 'VCS detection: git repository' {
+    mkdir -p project/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/project")
+    assert "$result" same_as "%{%B%F{blue}%}project%{%f%b%}"
+}
+
+@test 'VCS detection: jj repository' {
+    mkdir -p project/.jj
+    
+    result=$(get_prompt_string "$TEST_DIR/project")
+    assert "$result" same_as "%{%B%F{magenta}%}project%{%f%b%}"
+}
+
+@test 'VCS detection: repo repository' {
+    mkdir -p project/.repo
+    
+    result=$(get_prompt_string "$TEST_DIR/project")
+    assert "$result" same_as "%{%B%F{green}%}project%{%f%b%}"
+}
+
+@test 'path truncation: basic behavior' {
+    mkdir -p alpha/beta/gamma
+    
+    result=$(get_prompt_string "$TEST_DIR/alpha/beta/gamma")
+    assert "$result" matches ".*/a/b/gamma$"
+}
+
+@test 'path truncation: dotfile handling' {
+    mkdir -p project/.git
+    mkdir -p project/.config/settings
+    
+    result=$(get_prompt_string "$TEST_DIR/project/.config/settings")
+    assert "$result" same_as "%{%B%F{blue}%}project%{%f%b%}/.c/settings"
+}
+
+@test 'HOME directory: basic expansion' {
+    mkdir -p "$FAKE_HOME/documents/work"
+    
+    result=$(HOME="$FAKE_HOME" get_prompt_string "$FAKE_HOME/documents/work")
+    assert "$result" same_as "~/d/work"
+}
+
+@test 'inside VCS directory: .git root' {
+    mkdir -p myproject/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/myproject/.git")
+    assert "$result" same_as "%{%B%F{blue}%}myproject%{%f%b%}/.git"
+}
+
+@test 'inside VCS directory: .jj root' {
+    mkdir -p myproject/.jj
+    
+    result=$(get_prompt_string "$TEST_DIR/myproject/.jj")
+    assert "$result" same_as "%{%B%F{magenta}%}myproject%{%f%b%}/.jj"
+}
+
+@test 'inside VCS directory: .repo root' {
+    mkdir -p myproject/.repo
+    
+    result=$(get_prompt_string "$TEST_DIR/myproject/.repo")
+    assert "$result" same_as "%{%B%F{green}%}myproject%{%f%b%}/.repo"
+}
+
+# =============================================================================
+# INTEGRATION TESTS - Testing feature combinations
+# =============================================================================
+
+@test 'VCS with subdirectory' {
+    mkdir -p project/.git
+    mkdir -p project/src
+    
+    result=$(get_prompt_string "$TEST_DIR/project/src")
+    assert "$result" same_as "%{%B%F{blue}%}project%{%f%b%}/src"
+}
+
+@test 'VCS with path truncation' {
+    mkdir -p workspace/.git
+    mkdir -p workspace/projects/myapp/src/components
+    
+    result=$(get_prompt_string "$TEST_DIR/workspace/projects/myapp/src/components")
+    assert "$result" same_as "%{%B%F{blue}%}workspace%{%f%b%}/p/m/s/components"
+}
+
+@test 'nested VCS: two levels' {
+    mkdir -p outer/.git
+    mkdir -p outer/inner/.jj
+    
+    result=$(get_prompt_string "$TEST_DIR/outer/inner")
+    assert "$result" same_as "%{%B%F{blue}%}outer%{%f%b%}/%{%B%F{magenta}%}inner%{%f%b%}"
+}
+
+@test 'nested VCS: with subdirectory' {
+    mkdir -p outer/.git
+    mkdir -p outer/inner/.jj
+    mkdir -p outer/inner/deep
+    
+    result=$(get_prompt_string "$TEST_DIR/outer/inner/deep")
+    assert "$result" same_as "%{%B%F{blue}%}outer%{%f%b%}/%{%B%F{magenta}%}inner%{%f%b%}/deep"
+}
+
+@test 'HOME with VCS' {
+    mkdir -p "$FAKE_HOME/projects/myapp/.git"
+    mkdir -p "$FAKE_HOME/projects/myapp/src"
+    
+    result=$(HOME="$FAKE_HOME" get_prompt_string "$FAKE_HOME/projects/myapp/src")
+    assert "$result" same_as "%{%B%F{blue}%}myapp%{%f%b%}/src"
+}
+
+@test 'non-VCS path truncation' {
+    mkdir -p regular/path/to/somewhere
+    
+    result=$(get_prompt_string "$TEST_DIR/regular/path/to/somewhere")
+    assert "$result" matches ".*/r/p/t/somewhere$"
+}
+
+@test 'inside VCS directory: .git subdirectory' {
+    mkdir -p myproject/.git/hooks
+    
+    result=$(get_prompt_string "$TEST_DIR/myproject/.git/hooks")
+    assert "$result" same_as "%{%B%F{blue}%}myproject%{%f%b%}/.g/hooks"
+}
+
+@test 'inside VCS directory: nested .git with path truncation' {
+    mkdir -p workspace/.git/objects/pack/something
+    
+    result=$(get_prompt_string "$TEST_DIR/workspace/.git/objects/pack/something")
+    assert "$result" same_as "%{%B%F{blue}%}workspace%{%f%b%}/.g/o/p/something"
+}
+
+# =============================================================================
+# COMPLEX SCENARIOS - Testing edge cases and complex interactions
+# =============================================================================
+
+@test 'duplicate directory names' {
+    mkdir -p A/.git
+    mkdir -p A/foo/bar/A
+    
+    result=$(get_prompt_string "$TEST_DIR/A/foo/bar/A")
+    assert "$result" same_as "%{%B%F{blue}%}A%{%f%b%}/f/b/A"
+}
+
+@test 'three-level nested VCS' {
+    mkdir -p project/.git
+    mkdir -p project/module/.jj
+    mkdir -p project/module/submodule/.repo
+    mkdir -p project/module/submodule/deep
+    
+    result=$(get_prompt_string "$TEST_DIR/project/module/submodule/deep")
+    assert "$result" same_as "%{%B%F{blue}%}project%{%f%b%}/%{%B%F{magenta}%}module%{%f%b%}/%{%B%F{green}%}submodule%{%f%b%}/deep"
+}
+
+@test 'manifests special case: at manifests level' {
+    mkdir -p foo/.repo/manifests/.git
+    
+    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests")
+    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/manifests"
+}
+
+@test 'manifests special case: nested VCS coloring' {
+    mkdir -p foo/.repo/manifests/.git
+    mkdir -p foo/.repo/manifests/subdir
+    
+    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests/subdir")
+    assert "$result" same_as "%{%B%F{green}%}foo%{%f%b%}/.r/%{%B%F{blue}%}manifests%{%f%b%}/subdir"
+}
+
+@test 'inside nested VCS: outer .git directory' {
+    mkdir -p outer/.git
+    mkdir -p outer/inner/.jj
+    mkdir -p outer/.git/refs
+    
+    result=$(get_prompt_string "$TEST_DIR/outer/.git/refs")
+    assert "$result" same_as "%{%B%F{blue}%}outer%{%f%b%}/.g/refs"
+}
