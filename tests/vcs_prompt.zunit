@@ -28,28 +28,28 @@
 @test 'VCS detection: git repository' {
     mkdir -p project/.git
     
-    result=$(get_prompt_string "$TEST_DIR/project")
+    result=$(generate_vcs_path "$TEST_DIR/project")
     assert "$result" same_as "%B%F{blue}project%f%b"
 }
 
 @test 'VCS detection: jj repository' {
     mkdir -p project/.jj
     
-    result=$(get_prompt_string "$TEST_DIR/project")
+    result=$(generate_vcs_path "$TEST_DIR/project")
     assert "$result" same_as "%B%F{magenta}project%f%b"
 }
 
 @test 'VCS detection: repo repository' {
     mkdir -p project/.repo
     
-    result=$(get_prompt_string "$TEST_DIR/project")
+    result=$(generate_vcs_path "$TEST_DIR/project")
     assert "$result" same_as "%B%F{red}project%f%b"
 }
 
 @test 'path truncation: basic behavior' {
     mkdir -p alpha/beta/gamma
     
-    result=$(get_prompt_string "$TEST_DIR/alpha/beta/gamma")
+    result=$(generate_vcs_path "$TEST_DIR/alpha/beta/gamma")
     assert "$result" matches ".*/a/b/gamma$"
 }
 
@@ -57,35 +57,35 @@
     mkdir -p project/.git
     mkdir -p project/.config/settings
     
-    result=$(get_prompt_string "$TEST_DIR/project/.config/settings")
+    result=$(generate_vcs_path "$TEST_DIR/project/.config/settings")
     assert "$result" same_as "%B%F{blue}project%f%b/.c/settings"
 }
 
 @test 'HOME directory: basic expansion' {
     mkdir -p "$FAKE_HOME/documents/work"
     
-    result=$(HOME="$FAKE_HOME" get_prompt_string "$FAKE_HOME/documents/work")
+    result=$(HOME="$FAKE_HOME" generate_vcs_path "$FAKE_HOME/documents/work")
     assert "$result" same_as "~/d/work"
 }
 
 @test 'inside VCS directory: .git root' {
     mkdir -p myproject/.git
     
-    result=$(get_prompt_string "$TEST_DIR/myproject/.git")
+    result=$(generate_vcs_path "$TEST_DIR/myproject/.git")
     assert "$result" same_as "%B%F{blue}myproject%f%b/.git"
 }
 
 @test 'inside VCS directory: .jj root' {
     mkdir -p myproject/.jj
     
-    result=$(get_prompt_string "$TEST_DIR/myproject/.jj")
+    result=$(generate_vcs_path "$TEST_DIR/myproject/.jj")
     assert "$result" same_as "%B%F{magenta}myproject%f%b/.jj"
 }
 
 @test 'inside VCS directory: .repo root' {
     mkdir -p myproject/.repo
     
-    result=$(get_prompt_string "$TEST_DIR/myproject/.repo")
+    result=$(generate_vcs_path "$TEST_DIR/myproject/.repo")
     assert "$result" same_as "%B%F{red}myproject%f%b/.repo"
 }
 
@@ -97,7 +97,7 @@
     mkdir -p project/.git
     mkdir -p project/src
     
-    result=$(get_prompt_string "$TEST_DIR/project/src")
+    result=$(generate_vcs_path "$TEST_DIR/project/src")
     assert "$result" same_as "%B%F{blue}project%f%b/src"
 }
 
@@ -105,7 +105,7 @@
     mkdir -p workspace/.git
     mkdir -p workspace/projects/myapp/src/components
     
-    result=$(get_prompt_string "$TEST_DIR/workspace/projects/myapp/src/components")
+    result=$(generate_vcs_path "$TEST_DIR/workspace/projects/myapp/src/components")
     assert "$result" same_as "%B%F{blue}workspace%f%b/p/m/s/components"
 }
 
@@ -113,7 +113,7 @@
     mkdir -p outer/.git
     mkdir -p outer/inner/.jj
     
-    result=$(get_prompt_string "$TEST_DIR/outer/inner")
+    result=$(generate_vcs_path "$TEST_DIR/outer/inner")
     assert "$result" same_as "%B%F{blue}outer%f%b/%B%F{magenta}inner%f%b"
 }
 
@@ -122,7 +122,7 @@
     mkdir -p outer/inner/.jj
     mkdir -p outer/inner/deep
     
-    result=$(get_prompt_string "$TEST_DIR/outer/inner/deep")
+    result=$(generate_vcs_path "$TEST_DIR/outer/inner/deep")
     assert "$result" same_as "%B%F{blue}outer%f%b/%B%F{magenta}inner%f%b/deep"
 }
 
@@ -130,28 +130,28 @@
     mkdir -p "$FAKE_HOME/projects/myapp/.git"
     mkdir -p "$FAKE_HOME/projects/myapp/src"
     
-    result=$(HOME="$FAKE_HOME" get_prompt_string "$FAKE_HOME/projects/myapp/src")
+    result=$(HOME="$FAKE_HOME" generate_vcs_path "$FAKE_HOME/projects/myapp/src")
     assert "$result" same_as "%B%F{blue}myapp%f%b/src"
 }
 
 @test 'non-VCS path truncation' {
     mkdir -p regular/path/to/somewhere
     
-    result=$(get_prompt_string "$TEST_DIR/regular/path/to/somewhere")
+    result=$(generate_vcs_path "$TEST_DIR/regular/path/to/somewhere")
     assert "$result" matches ".*/r/p/t/somewhere$"
 }
 
 @test 'inside VCS directory: .git subdirectory' {
     mkdir -p myproject/.git/hooks
     
-    result=$(get_prompt_string "$TEST_DIR/myproject/.git/hooks")
+    result=$(generate_vcs_path "$TEST_DIR/myproject/.git/hooks")
     assert "$result" same_as "%B%F{blue}myproject%f%b/.g/hooks"
 }
 
 @test 'inside VCS directory: nested .git with path truncation' {
     mkdir -p workspace/.git/objects/pack/something
     
-    result=$(get_prompt_string "$TEST_DIR/workspace/.git/objects/pack/something")
+    result=$(generate_vcs_path "$TEST_DIR/workspace/.git/objects/pack/something")
     assert "$result" same_as "%B%F{blue}workspace%f%b/.g/o/p/something"
 }
 
@@ -163,7 +163,7 @@
     mkdir -p A/.git
     mkdir -p A/foo/bar/A
     
-    result=$(get_prompt_string "$TEST_DIR/A/foo/bar/A")
+    result=$(generate_vcs_path "$TEST_DIR/A/foo/bar/A")
     assert "$result" same_as "%B%F{blue}A%f%b/f/b/A"
 }
 
@@ -173,14 +173,14 @@
     mkdir -p project/module/submodule/.repo
     mkdir -p project/module/submodule/deep
     
-    result=$(get_prompt_string "$TEST_DIR/project/module/submodule/deep")
+    result=$(generate_vcs_path "$TEST_DIR/project/module/submodule/deep")
     assert "$result" same_as "%B%F{blue}project%f%b/%B%F{magenta}module%f%b/%B%F{red}submodule%f%b/deep"
 }
 
 @test 'manifests special case: at manifests level' {
     mkdir -p foo/.repo/manifests/.git
     
-    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests")
+    result=$(generate_vcs_path "$TEST_DIR/foo/.repo/manifests")
     # Update expectation: manifests should be colored since it contains .git
     assert "$result" same_as "%B%F{red}foo%f%b/.r/%B%F{blue}manifests%f%b"
 }
@@ -189,7 +189,7 @@
     mkdir -p foo/.repo/manifests/.git
     mkdir -p foo/.repo/manifests/subdir
     
-    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests/subdir")
+    result=$(generate_vcs_path "$TEST_DIR/foo/.repo/manifests/subdir")
     assert "$result" same_as "%B%F{red}foo%f%b/.r/%B%F{blue}manifests%f%b/subdir"
 }
 
@@ -198,7 +198,7 @@
     mkdir -p outer/inner/.jj
     mkdir -p outer/.git/refs
     
-    result=$(get_prompt_string "$TEST_DIR/outer/.git/refs")
+    result=$(generate_vcs_path "$TEST_DIR/outer/.git/refs")
     assert "$result" same_as "%B%F{blue}outer%f%b/.g/refs"
 }
 
@@ -207,7 +207,7 @@
     mkdir -p simple_project
     echo "gitdir: ../actual_git" > simple_project/.git
     
-    result=$(get_prompt_string "$TEST_DIR/simple_project")
+    result=$(generate_vcs_path "$TEST_DIR/simple_project")
     # simple_project should be colored blue because it contains .git file
     assert "$result" same_as "%B%F{blue}simple_project%f%b"
 }
@@ -218,7 +218,7 @@
     mkdir -p target_dir
     ln -s "$TEST_DIR/target_dir" test_project/.git
     
-    result=$(get_prompt_string "$TEST_DIR/test_project")
+    result=$(generate_vcs_path "$TEST_DIR/test_project")
     assert "$result" same_as "%B%F{blue}test_project%f%b"
 }
 
@@ -231,7 +231,7 @@
     # Create .git as a symlink 
     ln -s "$TEST_DIR/actual_git_dir" foo/.repo/manifests/.git
     
-    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests/subdir")
+    result=$(generate_vcs_path "$TEST_DIR/foo/.repo/manifests/subdir")
     # From subdir, both foo and manifests should be colored (nested VCS)
     assert "$result" same_as "%B%F{red}foo%f%b/.r/%B%F{blue}manifests%f%b/subdir"
 }
@@ -240,7 +240,7 @@
     # Test baseline: directory-based .git should color manifests
     mkdir -p test_dir_git/.repo/manifests/.git
     
-    result=$(get_prompt_string "$TEST_DIR/test_dir_git/.repo/manifests")
+    result=$(generate_vcs_path "$TEST_DIR/test_dir_git/.repo/manifests")
     # manifests should be colored because it contains .git
     assert "$result" same_as "%B%F{red}test_dir_git%f%b/.r/%B%F{blue}manifests%f%b"
 }
@@ -253,7 +253,33 @@
     # Create .git as a symlink 
     ln -s "$TEST_DIR/actual_git_dir" foo/.repo/manifests/.git
     
-    result=$(get_prompt_string "$TEST_DIR/foo/.repo/manifests")
+    result=$(generate_vcs_path "$TEST_DIR/foo/.repo/manifests")
     # From subdir, both foo and manifests should be colored (nested VCS)
     assert "$result" same_as "%B%F{red}foo%f%b/.r/%B%F{blue}manifests%f%b"
+}
+
+# =============================================================================
+# ERROR CODE DISPLAY TESTS
+# =============================================================================
+
+@test 'error code display: format includes conditional for error codes' {
+    # Test that the prompt format includes the conditional error code display
+    mkdir -p project/.git
+    
+    result=$(build_prompt_format "$TEST_DIR/project")
+    
+    # Should contain the conditional format for error codes
+    assert "$result" matches ".*%\\(\\?\\.\\.\\\[%F\\{red\\}%\\?%f\\\] \\).*"
+}
+
+@test 'error code display: format includes correct path and prompt symbol' {
+    # Test that the format includes the path and prompt elements correctly
+    mkdir -p project/.git
+    
+    result=$(build_prompt_format "$TEST_DIR/project")
+    
+    # Should start with the colored project name
+    assert "$result" matches "^%B%F\\{blue\\}project%f%b.*"
+    # Should contain the prompt symbol format
+    assert "$result" matches ".*%\\(!\\..\\.\\\$\\).*"
 }

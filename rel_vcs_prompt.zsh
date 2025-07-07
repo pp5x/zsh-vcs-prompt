@@ -188,8 +188,8 @@ process_path() {
     echo "$result"
 }
 
-# Core function to generate prompt string for a given directory (based on prompt_pwd logic)
-generate_prompt_string() {
+# Core function to generate VCS path string for a given directory
+generate_vcs_path() {
     local target_dir="${1:-$PWD}"
     
     # Save current PWD and switch to target directory
@@ -235,14 +235,16 @@ generate_prompt_string() {
     echo "$result"
 }
 
+# Build the prompt format string for a given directory
+build_prompt_format() {
+    local target_dir="${1:-$PWD}"
+    local path_part=$(generate_vcs_path "$target_dir")
+    echo "${path_part} %(?..[%F{red}%?%f] )%(!.#.$) "
+}
+
 prompt_pwd() {
-    PROMPT="$(generate_prompt_string) %(!.#.$) "
+    PROMPT="$(build_prompt_format)"
 }
 
 precmd_functions+=( prompt_pwd )
 
-# Testable function that returns the prompt string for a given directory
-get_prompt_string() {
-    local test_dir="$1"
-    generate_prompt_string "$test_dir"
-}
