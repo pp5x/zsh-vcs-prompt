@@ -47,10 +47,8 @@ generate_vcs_path() {
     local -a path_parts=(${(s:/:)display_path})
     local -a result_parts=()
     
-    # Track outermost VCS directory found during traversal
-    local outermost_vcs_root=""
-    local outermost_vcs_type=""
-    local outermost_vcs_start=-1
+    # Track outermost VCS found during traversal
+    local outermost_vcs_index=-1
     
     # Process path components backwards (from end to beginning)
     local -a current_parts=(${(s:/:)current_path})
@@ -71,12 +69,11 @@ generate_vcs_path() {
             # VCS directory with color
             local color=$(get_vcs_color "$vcs_type")
             result_parts=("%B${color}${dir}%f%b" "${result_parts[@]}")
-            outermost_vcs_root="$full_path"
-            outermost_vcs_type="$vcs_type"
-            outermost_vcs_start=$((i - 1))
+            outermost_vcs_index=$((i - 1))
         else
             # Non-VCS directory
-            if [[ $i -eq ${#path_parts[@]} ]]; then
+            if [[ $i == ${#path_parts[@]} ]]; then
+                # Last path component is not truncated
                 result_parts=("$dir" "${result_parts[@]}")
             else
                 result_parts=($(truncate_component "$dir") "${result_parts[@]}")
@@ -84,16 +81,16 @@ generate_vcs_path() {
         fi
     done
     
-    # If we found an outermost VCS directory, discard all components before it
-    if [[ $outermost_vcs_start -ge 0 ]]; then
-        result_parts=("${result_parts[@]:${outermost_vcs_start}}")
+    # If we found an outermost VCS, discard all components before it
+    if [[ $outermost_vcs_index >= 0 ]]; then
+        result_parts=("${result_parts[@]:${outermost_vcs_index}}")
     fi
     
     # Join result
     local result="${(j:/:)result_parts}"
     
     # Handle absolute paths (but not home paths or VCS paths)
-    if [[ -z "$outermost_vcs_root" && "$current_path" == /* && "$result" != "~"* ]]; then
+    if [[ $outermost_vcs_index < 0 && "$current_path" == /* && "$result" != "~"* ]]; then
         result="/$result"
     fi
     
