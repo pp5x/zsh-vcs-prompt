@@ -36,32 +36,28 @@ detect_vcs_dir() {
 # Core function to generate VCS path string for a given directory
 generate_vcs_path() {
     local current_path="${1:-$PWD}"
-    local display_path="$current_path"
-
-    # Handle home directory expansion for display purposes only
-    if [[ "$display_path" == "$HOME"* ]]; then
-        display_path="~${display_path#$HOME}"
+    
+    # Calculate HOME offset for later replacement
+    local home_offset=0
+    if [[ "$current_path" == "$HOME"* ]]; then
+        local -a home_parts=(${(s:/:)HOME})
+        home_offset=${#home_parts[@]}
     fi
     
-    # Split path into components for backwards processing
-    local -a path_parts=(${(s:/:)display_path})
+    # Split path into components for processing
+    local -a path_parts=(${(s:/:)current_path})
     local -a result_parts=()
     
     # Track outermost VCS found during traversal
     local outermost_vcs_index=-1
     
     # Process path components backwards (from end to beginning)
-    local -a current_parts=(${(s:/:)current_path})
     for ((i=${#path_parts[@]}; i > 0; i--)); do
         local dir="${path_parts[$i]}"
         [[ -z "$dir" ]] && continue
 
         # Build full path for VCS detection
-        local current_idx=$i
-        if [[ "$display_path" == "~"* ]]; then
-            current_idx=$((i + ${#current_parts[@]} - ${#path_parts[@]}))
-        fi
-        local full_path="/${(j:/:)current_parts[@]:0:${current_idx}}"
+        local full_path="/${(j:/:)path_parts[@]:0:${i}}"
 
         # Check for VCS
         local vcs_type="$(detect_vcs_dir "$full_path")"
@@ -82,15 +78,26 @@ generate_vcs_path() {
     done
     
     # If we found an outermost VCS, discard all components before it
-    if [[ $outermost_vcs_index >= 0 ]]; then
+    if [[ $outermost_vcs_index -ge 0 ]]; then
         result_parts=("${result_parts[@]:${outermost_vcs_index}}")
+    fi
+    
+    # Replace HOME portion with ~ if applicable
+    if [[ $outermost_vcs_index -ge 0 ]]; then
+        # VCS found - check if it's after HOME parts
+        if [[ $((outermost_vcs_index + home_offset)) -le ${#result_parts[@]} ]]; then
+            result_parts=("~" "${result_parts[@]:${home_offset}}")
+        fi
+    elif [[ $home_offset -gt 0 ]]; then
+        # No VCS but in HOME - always replace HOME parts
+        result_parts=("~" "${result_parts[@]:${home_offset}}")
     fi
     
     # Join result
     local result="${(j:/:)result_parts}"
     
     # Handle absolute paths (but not home paths or VCS paths)
-    if [[ $outermost_vcs_index < 0 && "$current_path" == /* && "$result" != "~"* ]]; then
+    if [[ $outermost_vcs_index -lt 0 && $home_offset -eq 0 && "$current_path" == /* ]]; then
         result="/$result"
     fi
     
