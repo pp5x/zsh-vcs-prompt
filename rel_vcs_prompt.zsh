@@ -83,13 +83,8 @@ generate_vcs_path() {
     fi
     
     # Replace HOME portion with ~ if applicable
-    if [[ $outermost_vcs_index -ge 0 ]]; then
-        # VCS found - check if it's after HOME parts
-        if [[ $((outermost_vcs_index + home_offset)) -le ${#result_parts[@]} ]]; then
-            result_parts=("~" "${result_parts[@]:${home_offset}}")
-        fi
-    elif [[ $home_offset -gt 0 ]]; then
-        # No VCS but in HOME - always replace HOME parts
+    if [[ $outermost_vcs_index -lt 0 && $home_offset -gt 0 ]]; then
+        # No VCS and in HOME - replace HOME parts
         result_parts=("~" "${result_parts[@]:${home_offset}}")
     fi
     
